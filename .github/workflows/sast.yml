@@ -1,4 +1,4 @@
-name: SAST Scan (CodeQL)
+name: Security Pipeline (SAST + DAST)
 
 on:
   push:
@@ -6,13 +6,16 @@ on:
   pull_request:
     branches: [ "main" ]
 
+permissions:
+  actions: read
+  contents: write        # ⚡ cần cho ZAP upload report
+  security-events: write # ⚡ cần cho CodeQL
+  pull-requests: write   # ⚡ cần nếu scan trên PR
+
 jobs:
   analyze:
+    name: SAST Scan (CodeQL)
     runs-on: ubuntu-latest
-    permissions:
-      security-events: write
-      actions: read
-      contents: read
 
     strategy:
       matrix:
@@ -32,3 +35,25 @@ jobs:
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
+
+  zap_scan:
+    name: DAST Scan (OWASP ZAP)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # cho phép job này ghi report
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.10.0
+        with:
+          target: 'https://example.com'   # 🔥 đổi sang web bạn muốn scan
+          rules_file_name: '.zap/rules.tsv'
+          cmd_options: '-a'
+
+      - name: Upload ZAP Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-report
+          path: report_html.html
