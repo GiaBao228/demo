@@ -1,0 +1,25 @@
+name: DAST Scan (OWASP ZAP)
+
+on:
+  workflow_dispatch:   # chạy thủ công
+  push:
+    branches: [ "main" ]
+
+jobs:
+  zap_scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build and run Docker app
+        run: |
+          docker build -t devsecops-app .
+          docker run -d -p 8080:8080 --name devsecops-app devsecops-app
+          sleep 20
+
+      - name: Run OWASP ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.8.2
+        with:
+          target: "http://localhost:8080"
